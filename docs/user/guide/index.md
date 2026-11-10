@@ -25,6 +25,7 @@ The agent can read and edit workspace files, run commands, delegate work, and ma
 ## Continue
 
 - [Configure models](./providers.md)
+- [Inspect conversations and DeepSeek costs](./admin-console.md)
 - [Use the Python SDK](./python-sdk.md)
 - [Publish the Web UI behind a reverse proxy](./public-deployments.md)
 - [Use other CLI modes](../../../apps/cli/README.md)

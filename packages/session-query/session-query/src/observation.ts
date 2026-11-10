@@ -99,23 +99,53 @@ export class SessionObservationReader {
     sessionId: SessionId,
     options: SessionObservationOptions = {},
   ): Promise<SessionObservation> {
+    return this.select(sessionId, options, (_session, observation) => observation)
+  }
+
+  /**
+   * Read domain-owned state synchronously from the observation owner.
+   * @param sessionId - live or persisted identity.
+   * @param readState - synchronous projection reader; must not append events.
+   * @param options - cancellation and optional wire projections.
+   * @returns caller-owned observation and its domain state; prepared Sessions can include
+   * constructor-only resume markers after the observed journal cut.
+   */
+  async readState<S>(
+    sessionId: SessionId,
+    readState: (session: Session) => S,
+    options: SessionObservationOptions = {},
+  ): Promise<{ observation: SessionObservation; state: S }> {
+    return this.select(sessionId, options, (session, observation) => {
+      try { return { observation, state: readState(session) } }
+      catch (error) {
+        observation[Symbol.dispose]()
+        throw error
+      }
+    })
+  }
+
+  private async select<T>(
+    sessionId: SessionId,
+    options: SessionObservationOptions,
+    select: (session: Session, observation: SessionObservation) => T,
+  ): Promise<T> {
     const { signal, projectionMode = 'all' } = options
     for (;;) {
       throwIfObservationAborted(signal)
       const live = this.ctx.sessions.get(sessionId)
-      if (live !== undefined) return this.live(live, projectionMode)
+      if (live !== undefined) return select(live, this.live(live, projectionMode))
       const persistence = this.ctx.get('sessionPersistence')
       if (persistence === undefined) throw notFound(sessionId)
 
       const snapshot = await this.statSource(persistence, sessionId, signal)
       const attachedDuringStat = this.ctx.sessions.get(sessionId)
-      if (attachedDuringStat !== undefined) return this.live(attachedDuringStat, projectionMode)
+      if (attachedDuringStat !== undefined) return select(attachedDuringStat, this.live(attachedDuringStat, projectionMode))
       let entry = this.cachedEntry(persistence.identity, sessionId, snapshot.revision)
       if (entry === undefined) {
         const loaded = await this.loadSource(persistence, sessionId, signal)
         throwIfObservationAborted(signal)
         const attached = this.ctx.sessions.get(sessionId)
-        if (attached !== undefined) return this.live(attached, projectionMode)
+        if (attached !== undefined) return select(attached, this.live(attached, projectionMode))
         // The handle marks persisted events as adoptable; synthetic closers
         // are owned by this read, so the combined seed needs no copy.
         const seed = loaded.events
@@ -158,7 +188,7 @@ export class SessionObservationReader {
           { cause: error },
         )
       }
-      return this.preparedLease(sessionId, entry, projections)
+      return select(entry.session, this.preparedLease(sessionId, entry, projections))
     }
   }
 

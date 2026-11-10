@@ -1,0 +1,5 @@
+# Owner-only conversation history and DeepSeek cost reporting for the Web profile.
+- id: admin
+  disabled: false
+- id: ui-admin
+  disabled: false

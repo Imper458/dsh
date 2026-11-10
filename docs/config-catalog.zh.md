@@ -50,6 +50,33 @@ export type Config = z.infer<typeof Config>
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-action-cards -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-admin -->
+<a id="deepseek-aidsh-admin"></a>
+
+## `@deepseek-ai/dsh-admin`
+
+- `inject`: `sessionQuery` · `sessionProjections` · `sessions` · `sessionPersistence`
+- `source`: [`packages/session-query/admin/src/index.ts:19`](../packages/session-query/admin/src/index.ts)
+
+```ts config-catalog
+/** Deployment-owned database path and bounds; no prices are silently supplied. */
+export interface Config {
+  /** Required absolute path to the SQLite database containing metadata and durable prices. */
+  path: string
+  /** Background corpus reconciliation interval in milliseconds; defaults to 5000. */
+  refreshIntervalMs?: number
+  /** Maximum interactive page size in rows; defaults to 100. */
+  pageSizeMax?: number
+  /** Maximum serialized event or tool detail response in UTF-8 bytes; defaults to 65536. */
+  detailBytesMax?: number
+  /** Maximum matching rows in one CSV export; defaults to 10000. */
+  exportRowsMax?: number
+  /** Maximum UTF-8 bytes in one CSV export; defaults to 16777216. */
+  exportBytesMax?: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-admin -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-agent-default-model -->
 <a id="deepseek-aidsh-agent-default-model"></a>
 
@@ -4906,6 +4933,7 @@ export interface Config {
 | `@deepseek-ai/dsh-client-modules` | `loader` | [`packages/client/modules/src/index.ts`](../packages/client/modules/src/index.ts) |
 | `@deepseek-ai/dsh-client-resources` | — | [`packages/client/resources/src/index.ts`](../packages/client/resources/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-action-cards` | — | [`packages/experimental/client-ui-action-cards/src/index.ts`](../packages/experimental/client-ui-action-cards/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-admin` | — | [`packages/client/ui-admin/src/index.ts`](../packages/client/ui-admin/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-agent-preset` | — | [`packages/client/ui-agent-preset/src/index.ts`](../packages/client/ui-agent-preset/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-agent-team` | — | [`packages/client/ui-agent-team/src/index.ts`](../packages/client/ui-agent-team/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-approval` | — | [`packages/client/ui-approval/src/index.ts`](../packages/client/ui-approval/src/index.ts) |

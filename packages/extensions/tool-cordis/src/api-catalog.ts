@@ -114,6 +114,91 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'admin',
+    summary: 'Internal administration service; every Remote operation requires the owner principal.',
+    description: 'Internal administration service; every Remote operation requires the owner principal.',
+    methods: [
+      {
+        signature: '@Remote listSessions(request: AdminPageRequest): AdminPage<AdminSessionRow>',
+        description: 'List indexed conversations without activating their agents.',
+        parameters: [{ name: 'request', description: 'shared filter, pagination and optional revision.' }],
+        returns: 'one bounded page with coverage counters.',
+      },
+      {
+        signature: '@Remote getSession(sessionId: SessionId, snapshot?: AdminSnapshotId): AdminSessionDetail',
+        description: 'Read one indexed conversation\'s identity and watermark.',
+        parameters: [{ name: 'sessionId', description: 'conversation to inspect.' }, { name: 'snapshot', description: 'optional selected revision.' }],
+        returns: 'metadata covering the indexed journal cut.',
+      },
+      {
+        signature: '@Remote async listEvents(request: AdminEventsRequest): Promise<AdminPage<AdminEventRow>>',
+        description: 'Read a bounded event page through the prepared observation API.',
+        parameters: [{ name: 'request', description: 'indexed conversation, pagination and optional revision.' }],
+        returns: 'bounded serialized events, with readable chat text separate from raw payloads.',
+      },
+      {
+        signature: '@Remote listTools(request: AdminPageRequest): AdminPage<AdminToolRow>',
+        description: 'List top-level and nested tool calls, each with its own duration.',
+        parameters: [{ name: 'request', description: 'shared selection and page.' }],
+        returns: 'indexed tool metadata without arguments or result payloads.',
+      },
+      {
+        signature: '@Remote async getTool(sessionId: SessionId, seq: SessionSeq, snapshot?: AdminSnapshotId): Promise<AdminToolDetail>',
+        description: 'Read only the selected tool\'s payload from its source observation.',
+        parameters: [{ name: 'sessionId', description: 'owning conversation.' }, { name: 'seq', description: 'indexed tool-call event.' }, { name: 'snapshot', description: 'optional selected revision.' }],
+        returns: 'bounded arguments and result, preserving missing outcomes.',
+      },
+      {
+        signature: '@Remote listUsage(request: AdminPageRequest): AdminPage<AdminUsageRow>',
+        description: 'List DeepSeek estimates and explicit uncovered calls.',
+        parameters: [{ name: 'request', description: 'shared selection and page.' }],
+        returns: 'call-level token counters and matched immutable rates.',
+      },
+      {
+        signature: '@Remote usageSummary(request: AdminPageRequest): AdminUsageSummary',
+        description: 'Aggregate the full filtered call set, independently of the visible page.',
+        parameters: [{ name: 'request', description: 'shared selection and optional revision.' }],
+        returns: 'currency-separated subtotals and coverage counts.',
+      },
+      {
+        signature: '@Remote listPrices(): AdminPriceVersion[]',
+        description: 'List configured prices without supplying implicit rates.',
+        parameters: [],
+        returns: 'immutable configured prices; absence means costs are unavailable.',
+      },
+      {
+        signature: '@Remote addPrice(price: AdminPriceInput): AdminPriceVersion',
+        description: 'Append a future-effective DeepSeek price version.',
+        parameters: [{ name: 'price', description: 'all three disjoint usage rates and activation time.' }],
+        returns: 'committed version; existing versions are never overwritten.',
+      },
+      {
+        signature: '@Remote repriceHistory(request: AdminHistoricalPriceRequest): AdminPriceVersion',
+        description: 'Explicitly add a historical version and recompute subsequent estimates from it.',
+        parameters: [{ name: 'request', description: 'backdated rates; the next effective version bounds their interval.' }],
+        returns: 'committed immutable version; prior exports retain their original revision.',
+      },
+      {
+        signature: '@Remote indexStatus(): AdminIndexStatus',
+        description: 'Read the current background index progress.',
+        parameters: [],
+        returns: 'background progress and any persistent indexing failure.',
+      },
+      {
+        signature: '@Remote rebuildIndex(): AdminIndexStatus',
+        description: 'Request a rebuild of derived metadata while preserving durable prices.',
+        parameters: [],
+        returns: 'current rebuild progress; a running pass is left intact.',
+      },
+      {
+        signature: '@Remote exportCsv(request: AdminExportRequest): AdminExportResult',
+        description: 'Export the exact selected revision without silently refreshing it.',
+        parameters: [{ name: 'request', description: 'resource kind, shared filters, and required revision.' }],
+        returns: 'a bounded CSV with formula-safe text cells and revision metadata.',
+      },
+    ],
+  },
+  {
     key: 'agentDefaultModel',
     summary: 'Owns the default model selection independently of any Host or transport.',
     description: 'Owns the default model selection independently of any Host or transport. Each operation reads the owning Config references.',
@@ -3047,6 +3132,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'a caller-owned observation lease.',
       },
       {
+        signature: 'observeState<S>( sessionId: SessionId, readState: (session: Session) => S, options: SessionObservationOptions = {}, ): Promise<{ observation: SessionObservation; state: S }>',
+        description: 'Read a private domain projection from the live or prepared observation owner.',
+        parameters: [{ name: 'sessionId', description: 'logical Session identity.' }, { name: 'readState', description: 'synchronous domain reader; must not append events or retain the Session.' }, { name: 'options', description: 'cancellation and optional public projection selection.' }],
+        returns: 'domain state and its observation; prepared state can include constructor-only resume markers, never new persisted work. The caller disposes the observation.',
+      },
+      {
         signature: 'abstract searchSessions( request: SessionSearchRequest, exec?: SessionSearchExecContext, ): Promise<SessionSearchPage<SessionSearchHit>>',
         description: 'Search the live-preferred logical corpus and group by session.',
         parameters: [{ name: 'request', description: 'query text, metadata filters, page size, and cursor.' }, { name: 'exec', description: 'optional cancellation control.' }],
@@ -5510,6 +5601,102 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AdapterRegistrationHandle',
     declaration: 'export interface AdapterRegistrationHandle {\n    (): void;\n    replace(providers: string[]): void;\n}',
+  },
+  {
+    name: 'AdminCostTotal',
+    declaration: 'export interface AdminCostTotal {\n    currency: string;\n    amount: number;\n}',
+  },
+  {
+    name: 'AdminEventRow',
+    declaration: 'export interface AdminEventRow {\n    seq: SessionSeq;\n    time: number;\n    type: string;\n    data: string;\n    text: string | null;\n    role: \'user\' | \'assistant\' | null;\n    truncated: boolean;\n    inherited: boolean;\n}',
+  },
+  {
+    name: 'AdminEventsRequest',
+    declaration: 'export interface AdminEventsRequest {\n    messagesOnly?: boolean;\n    sessionId: SessionId;\n    offset?: number;\n    limit?: number;\n    snapshot?: AdminSnapshotId;\n}',
+  },
+  {
+    name: 'AdminExportRequest',
+    declaration: 'export interface AdminExportRequest {\n    kind: \'sessions\' | \'tools\' | \'usage\';\n    filter?: AdminFilter;\n    snapshot: AdminSnapshotId;\n}',
+  },
+  {
+    name: 'AdminExportResult',
+    declaration: 'export interface AdminExportResult {\n    filename: string;\n    csv: string;\n    snapshot: AdminSnapshotId;\n}',
+  },
+  {
+    name: 'AdminFilter',
+    declaration: 'export interface AdminFilter {\n    query?: string;\n    from?: number;\n    to?: number;\n    model?: string;\n    state?: AdminSessionState;\n    sessionId?: SessionId;\n    descendants?: boolean;\n}',
+  },
+  {
+    name: 'AdminHistoricalPriceRequest',
+    declaration: 'export interface AdminHistoricalPriceRequest {\n    price: AdminPriceInput;\n}',
+  },
+  {
+    name: 'AdminIndexStatus',
+    declaration: 'export interface AdminIndexStatus {\n    state: \'idle\' | \'indexing\' | \'ready\' | \'error\';\n    indexedSessions: number;\n    totalSessions: number;\n    indexedAt: number | null;\n    snapshot: AdminSnapshotId;\n    failedSessions: number;\n    error: string | null;\n}',
+  },
+  {
+    name: 'AdminModelUsage',
+    declaration: 'export interface AdminModelUsage {\n    model: string | null;\n    calls: number;\n    costs: AdminCostTotal[];\n}',
+  },
+  {
+    name: 'AdminPage',
+    declaration: 'export interface AdminPage<T> {\n    items: T[];\n    total: number;\n    snapshot: AdminSnapshotId;\n    indexedAt: number | null;\n}',
+  },
+  {
+    name: 'AdminPageRequest',
+    declaration: 'export interface AdminPageRequest {\n    filter?: AdminFilter;\n    offset?: number;\n    limit?: number;\n    snapshot?: AdminSnapshotId;\n    sort?: \'newest\' | \'oldest\';\n}',
+  },
+  {
+    name: 'AdminPriceId',
+    declaration: 'export type AdminPriceId = Branded<\'AdminPriceId\'>;',
+  },
+  {
+    name: 'AdminPriceInput',
+    declaration: 'export interface AdminPriceInput {\n    model: string;\n    currency: string;\n    effectiveFrom: number;\n    inputPerMillion: string;\n    cacheReadPerMillion: string;\n    outputPerMillion: string;\n    deepseekSchedule?: {\n        validUntil: number;\n        holidays: string[];\n    } | undefined;\n}',
+  },
+  {
+    name: 'AdminPriceVersion',
+    declaration: 'export interface AdminPriceVersion extends AdminPriceInput {\n    id: AdminPriceId;\n    createdAt: number;\n}',
+  },
+  {
+    name: 'AdminSessionDetail',
+    declaration: 'export interface AdminSessionDetail {\n    session: AdminSessionRow;\n    snapshot: AdminSnapshotId;\n    throughSeq: number;\n    inheritedEventCount: number;\n}',
+  },
+  {
+    name: 'AdminSessionRow',
+    declaration: 'export interface AdminSessionRow {\n    id: SessionId;\n    parentId: SessionId | null;\n    title: string;\n    workspace: string | null;\n    costs: AdminCostTotal[];\n    missingPrice: number;\n    createdAt: number;\n    updatedAt: number;\n    state: AdminSessionState;\n    models: string[];\n    inputTokens: number;\n    cacheReadTokens: number;\n    outputTokens: number;\n    calls: number;\n    tools: number;\n    missingUsage: number;\n}',
+  },
+  {
+    name: 'AdminSessionState',
+    declaration: 'export type AdminSessionState = \'running\' | \'completed\' | \'failed\' | \'interrupted\' | \'idle\';',
+  },
+  {
+    name: 'AdminSnapshotId',
+    declaration: 'export type AdminSnapshotId = Branded<\'AdminSnapshotId\'>;',
+  },
+  {
+    name: 'AdminToolDetail',
+    declaration: 'export interface AdminToolDetail {\n    tool: AdminToolRow;\n    arguments: string;\n    result: string | null;\n    truncated: boolean;\n    snapshot: AdminSnapshotId;\n}',
+  },
+  {
+    name: 'AdminToolRow',
+    declaration: 'export interface AdminToolRow {\n    sessionId: SessionId;\n    seq: SessionSeq;\n    name: string;\n    nested: boolean;\n    time: number;\n    durationMs: number | null;\n    status: \'running\' | \'success\' | \'error\' | \'interrupted\';\n}',
+  },
+  {
+    name: 'AdminUsageDay',
+    declaration: 'export interface AdminUsageDay {\n    date: string;\n    calls: number;\n    inputTokens: number;\n    cacheReadTokens: number;\n    outputTokens: number;\n    costs: AdminCostTotal[];\n}',
+  },
+  {
+    name: 'AdminUsageKind',
+    declaration: 'export type AdminUsageKind = \'conversation\' | \'compaction\' | \'title\';',
+  },
+  {
+    name: 'AdminUsageRow',
+    declaration: 'export interface AdminUsageRow {\n    sessionId: SessionId;\n    seq: SessionSeq;\n    time: number;\n    kind: AdminUsageKind;\n    model: string | null;\n    inputTokens: number | null;\n    cacheReadTokens: number | null;\n    outputTokens: number | null;\n    coverage: \'priced\' | \'missing-usage\' | \'missing-price\' | \'unsupported\';\n    amount: number | null;\n    currency: string | null;\n    priceId: AdminPriceId | null;\n}',
+  },
+  {
+    name: 'AdminUsageSummary',
+    declaration: 'export interface AdminUsageSummary {\n    daily: AdminUsageDay[];\n    models: AdminModelUsage[];\n    sessions: {\n        running: number;\n        failed: number;\n        total: number;\n    };\n    calls: number;\n    inputTokens: number;\n    cacheReadTokens: number;\n    outputTokens: number;\n    pricedCalls: number;\n    missingUsage: number;\n    missingPrice: number;\n    unsupportedCalls: number;\n    costs: AdminCostTotal[];\n    snapshot: AdminSnapshotId;\n    indexedAt: number | null;\n}',
   },
   {
     name: 'AdmittedPromptContentPart',

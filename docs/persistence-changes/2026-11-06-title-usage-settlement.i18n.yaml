@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-11-06-title-usage-settlement.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-11-06-title-usage-settlement.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-11-06-title-usage-settlement:
+  en: 23960199a6418157
+  zh: 30adf14e82c20dc8
+/2026-11-06-title-usage-settlement/summary:
+  en: e558c6b869deb5ca
+  zh: adc198923e1360f3
+/2026-11-06-title-usage-settlement/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-11-06-title-usage-settlement/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-11-06-title-usage-settlement/compatibility:
+  en: 9530efd69740ee17
+  zh: 1ae2404f99595edd
+/2026-11-06-title-usage-settlement/verification:
+  en: 041503b185a4f223
+  zh: bfce243baa9df0c0
+/2026-11-06-title-usage-settlement/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

@@ -789,3 +789,30 @@ describe('SessionObservationReader cold projections', () => {
     await ctx.fiber.dispose()
   })
 })
+
+
+describe('private domain state observations', () => {
+  it('reads a cold domain state without publishing the prepared Session and releases the lease on reader failure', async () => {
+    const ctx = await readerContext()
+    try {
+      const meta = header('private-domain')
+      const store = new Map([[meta.id, { header: meta, events: [messageEvent(0, 'kept')], revision: 'r1' }]])
+      const counters = { stat: 0, open: 0, read: 0 }
+      ctx.provide('sessionPersistence', stubPersistence(store, counters))
+      const reader = new SessionObservationReader(ctx, 1)
+      const result = await reader.readState(meta.id, session => session.firstLiveSeq, { projectionMode: 'none' })
+      expect(result.state).toBe(result.observation.cursor + 1)
+      expect(ctx.sessions.get(meta.id)).toBeUndefined()
+      result.observation[Symbol.dispose]()
+      expect(() => result.observation.retain()).toThrow('disposed')
+      await expect(reader.readState(meta.id, () => { throw new Error('domain read rejected') }, { projectionMode: 'none' })).rejects.toThrow('domain read rejected')
+      const other = header('next-domain')
+      store.set(other.id, { header: other, events: [], revision: 'r2' })
+      const next = await reader.readState(other.id, session => session.seq, { projectionMode: 'none' })
+      next.observation[Symbol.dispose]()
+      const reopened = await reader.readState(meta.id, session => session.seq, { projectionMode: 'none' })
+      reopened.observation[Symbol.dispose]()
+      expect(counters.open).toBe(3)
+    } finally { await ctx.fiber.dispose() }
+  })
+})

@@ -584,8 +584,16 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'Session reads, traces, filters, and search',
     mode: 'seam',
     implementations: ['session-query-sqlite'],
-    consumers: ['session-reference', 'tool-session-query'],
+    consumers: ['session-reference', 'tool-session-query', 'admin'],
     note: 'The interface supplies exact reads, filters, and traces; its concrete backend adds full-text reconciliation, ranking, snippets, and cursor generations, while the model consumer owns workspace authority and cursor-free rendering.',
+  },
+  {
+    key: 'admin',
+    pkg: 'admin',
+    title: 'Owner administration and DeepSeek cost estimates',
+    mode: 'service',
+    consumers: ['client-ui-admin'],
+    note: 'Reads stored conversation and tool metadata, estimates DeepSeek costs from recorded usage and immutable prices, and exports owner-authorized query results.',
   },
   {
     key: 'fileReferences',

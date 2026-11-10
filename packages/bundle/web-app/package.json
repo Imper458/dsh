@@ -204,7 +204,9 @@
     "@deepseek-ai/dsh-deliverable-file-references": "workspace:*",
     "@deepseek-ai/dsh-client-ui-file-drag": "workspace:*",
     "@deepseek-ai/dsh-client-ui-context-menu": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-file-actions": "workspace:*"
+    "@deepseek-ai/dsh-client-ui-file-actions": "workspace:*",
+    "@deepseek-ai/dsh-admin": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-admin": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

@@ -6,6 +6,7 @@ import type {
   GenerateOptions,
   LlmResolvedModelInfo,
   StreamChunk,
+  TokenUsage,
 } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import { SessionTitleProviderId } from '@deepseek-ai/dsh-session-title'
@@ -177,6 +178,95 @@ async function withScript(script: readonly StreamChunk[], reasoningEfforts?: rea
 }
 
 describe('executeSessionTitleLlm', () => {
+  it('records each completed request with its reported usage and request identity', async () => {
+    const usage: TokenUsage = { inputTokens: 21, outputTokens: 4, cacheReadTokens: 8 }
+    const { ctx } = await withScript([
+      ...SCRIPT.slice(0, -1),
+      { type: 'usage', usage },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ])
+    const providerRequest = request(ctx)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await executeSessionTitleLlm(ctx, resolveSessionTitleLlmConfig(CONFIG), providerRequest, TITLE_PROVIDER, prepared(providerRequest))
+    }
+    const events = providerRequest.session.snapshotEvents()
+    const requests = events.filter(event => event.type === 'session/title-llm-request')
+    const results = events.filter(event => event.type === 'session/title-llm-result')
+    expect(results.map(event => event.data)).toEqual(requests.map(event => ({
+      requestSeq: event.seq, status: 'completed', usage,
+    })))
+  })
+
+  it.each([undefined, { inputTokens: 0, outputTokens: 0 }])('preserves missing usage or a reported zero: %s', async (usage) => {
+    const { ctx } = await withScript([
+      ...SCRIPT.slice(0, -1),
+      ...usage === undefined ? [] : [{ type: 'usage' as const, usage }],
+      { type: 'finish', reason: { kind: 'stop' } },
+    ])
+    const providerRequest = request(ctx)
+    await executeSessionTitleLlm(ctx, resolveSessionTitleLlmConfig(CONFIG), providerRequest, TITLE_PROVIDER, prepared(providerRequest))
+    const result = providerRequest.session.snapshotEvents().find(event => event.type === 'session/title-llm-result')
+    expect(result?.data).toMatchObject({ status: 'completed' })
+    if (usage === undefined) expect(result?.data).not.toHaveProperty('usage')
+    else expect(result?.data.usage).toEqual(usage)
+  })
+
+  it.each([
+    [{ kind: 'error', failure: { message: 'provider failed', code: 'UPSTREAM_ERROR' } }, 'failed'],
+    [{ kind: 'aborted', failure: { message: 'provider aborted', code: 'ABORTED' } }, 'cancelled'],
+  ] satisfies Array<[FinishReason, string]>)('retains reported usage when the model ends with %s', async (reason, status) => {
+    const usage: TokenUsage = { inputTokens: 21, outputTokens: 0 }
+    const { ctx } = await withScript([{ type: 'usage', usage }, { type: 'finish', reason }])
+    const providerRequest = request(ctx)
+    const execution = executeSessionTitleLlm(
+      ctx, resolveSessionTitleLlmConfig(CONFIG), providerRequest, TITLE_PROVIDER, prepared(providerRequest),
+    )
+    await expect(execution)
+      .rejects.toThrow()
+    const events = providerRequest.session.snapshotEvents()
+    expect(events.filter(event => event.type === 'session/title-llm-result').map(event => event.data)).toEqual([{
+      requestSeq: events.find(event => event.type === 'session/title-llm-request')?.seq,
+      status,
+      usage,
+    }])
+  })
+
+  it('settles a thrown stream failure without replacing its error', async () => {
+    const { ctx } = await withScript(SCRIPT)
+    const failure = new Error('transport stopped')
+    const usage: TokenUsage = { inputTokens: 3, outputTokens: 2 }
+    ctx.on('llm/stream', () => (async function* (): AsyncIterable<StreamChunk> {
+      yield { type: 'usage', usage }
+      throw failure
+    })())
+    const providerRequest = request(ctx)
+    const execution = executeSessionTitleLlm(
+      ctx, resolveSessionTitleLlmConfig(CONFIG), providerRequest, TITLE_PROVIDER, prepared(providerRequest),
+    )
+    await expect(execution)
+      .rejects.toBe(failure)
+    expect(providerRequest.session.snapshotEvents().find(event => event.type === 'session/title-llm-result')?.data)
+      .toMatchObject({ status: 'failed', usage })
+  })
+
+  it('retains delivered usage when the caller cancels the stream', async () => {
+    const { ctx } = await withScript(SCRIPT)
+    const controller = new AbortController()
+    const usage: TokenUsage = { inputTokens: 3, outputTokens: 2 }
+    ctx.on('llm/stream', () => (async function* (): AsyncIterable<StreamChunk> {
+      controller.abort(new Error('caller stopped'))
+      yield { type: 'usage', usage }
+    })())
+    const providerRequest = request(ctx, controller.signal)
+    const execution = executeSessionTitleLlm(
+      ctx, resolveSessionTitleLlmConfig(CONFIG), providerRequest, TITLE_PROVIDER, prepared(providerRequest),
+    )
+    await expect(execution)
+      .rejects.toThrow('caller stopped')
+    expect(providerRequest.session.snapshotEvents().find(event => event.type === 'session/title-llm-result')?.data)
+      .toMatchObject({ status: 'cancelled', usage })
+  })
+
   it('dispatches the prepared system and input, logs attribution, and forwards the provider reasoning selector', async () => {
     const ctx = new Context()
     onTestFinished(() => ctx.fiber.dispose())

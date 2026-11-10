@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for admin-console.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/user/guide/admin-console.md
+/inspect-conversations-and-deepseek-costs:
+  en: 8e49ff33917cdad8
+  zh: dbae10ce071c8907
+/inspect-conversations-and-deepseek-costs/enable-the-panel-from-source:
+  en: 07dfbfc833abcc0f
+  zh: dd449c4c7e443de3
+/inspect-conversations-and-deepseek-costs/read-a-conversation:
+  en: ab14cac359b2f26f
+  zh: aba7e2ece1d7da82
+/inspect-conversations-and-deepseek-costs/configure-estimates-and-export:
+  en: 4942618debeb1aaf
+  zh: 97dcf41155ef1ff9
+/inspect-conversations-and-deepseek-costs/recover-an-incomplete-index:
+  en: b7bbb88d8878f1c7
+  zh: 3a8b44c3510890d9

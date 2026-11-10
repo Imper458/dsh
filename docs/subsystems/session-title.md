@@ -86,6 +86,20 @@ interface SessionTitleLlmRequestEventData {
 }
 ```
 
+A settlement record refers to its request sequence and preserves reported usage even when generation fails or is cancelled. The original request owns the route; an absent settlement or usage report does not establish zero consumption.
+
+```ts type-equiv
+/** Settled model execution and reported usage for one auxiliary title request. */
+interface SessionTitleLlmResultEventData {
+  /** Sequence of the owning `session/title-llm-request` event. */
+  readonly requestSeq: SessionSeq
+  /** Model execution outcome; completion does not imply that the title was accepted. */
+  readonly status: 'completed' | 'failed' | 'cancelled'
+  /** Last provider-reported usage; absence means unreported, not zero. */
+  readonly usage?: TokenUsage
+}
+```
+
 ## Provider input and output
 
 The service snapshots eligible messages through one revision and, immediately before each provider call, the latest accepted title including the fallback it just ensured. A provider returns only seqs from that request; service-owned acceptance verifies ordering, normalizes the title, enforces the byte limit, and appends the title with its source-message seqs and source kind.

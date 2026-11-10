@@ -364,6 +364,266 @@ type SessionQueryErrorCode =
   | 'SESSION_QUERY_SOURCE_CONFLICT'
 ```
 
+## Owner administration
+
+The owner-only `admin` service returns indexed conversation, tool and DeepSeek usage records. Page revisions bind list, detail and CSV reads to the same index and price state. Unknown counters and prices remain nullable; costs are separated by currency. The [package reference](../../packages/session-query/admin/README.md) owns pricing, filtering and recovery semantics.
+
+```ts type-equiv
+/** Identifies one immutable index and price revision. */
+type AdminSnapshotId = Branded<'AdminSnapshotId'>
+```
+
+```ts type-equiv
+/** Identifies one append-only model price version. */
+type AdminPriceId = Branded<'AdminPriceId'>
+```
+
+```ts type-equiv
+/** Indexed lifecycle of a conversation. */
+type AdminSessionState = 'running' | 'completed' | 'failed' | 'interrupted' | 'idle'
+```
+
+```ts type-equiv
+/** Shared selection; timestamps are inclusive start and exclusive end in epoch milliseconds. */
+interface AdminFilter {
+  query?: string
+  from?: number
+  to?: number
+  model?: string
+  state?: AdminSessionState
+  sessionId?: SessionId
+  descendants?: boolean
+}
+```
+
+```ts type-equiv
+/** Page selection against one revision; omit snapshot to select the latest. */
+interface AdminPageRequest {
+  filter?: AdminFilter
+  offset?: number
+  limit?: number
+  snapshot?: AdminSnapshotId
+  sort?: 'newest' | 'oldest'
+}
+```
+
+```ts type-equiv
+/** Bounded rows sharing an index revision. */
+interface AdminPage<T> {
+  items: T[]
+  total: number
+  snapshot: AdminSnapshotId
+  indexedAt: number | null
+}
+```
+
+```ts type-equiv
+/** A conversation row counts only the work owned by that conversation. */
+interface AdminSessionRow {
+  id: SessionId
+  parentId: SessionId | null
+  title: string
+  workspace: string | null
+  costs: AdminCostTotal[]
+  missingPrice: number
+  createdAt: number
+  updatedAt: number
+  state: AdminSessionState
+  models: string[]
+  inputTokens: number
+  cacheReadTokens: number
+  outputTokens: number
+  calls: number
+  tools: number
+  missingUsage: number
+}
+```
+
+```ts type-equiv
+/** Detail identity and the precise observed journal watermark. */
+interface AdminSessionDetail {
+  session: AdminSessionRow
+  snapshot: AdminSnapshotId
+  throughSeq: number
+  inheritedEventCount: number
+}
+```
+
+```ts type-equiv
+/** Bounded event row; messagesOnly reads leave data empty and dedicate their budget to readable text. */
+interface AdminEventRow {
+  seq: SessionSeq
+  time: number
+  type: string
+  data: string
+  text: string | null
+  role: 'user' | 'assistant' | null
+  truncated: boolean
+  inherited: boolean
+}
+```
+
+```ts type-equiv
+/** Explicit event-page read of one observed conversation. */
+interface AdminEventsRequest {
+  messagesOnly?: boolean
+  sessionId: SessionId
+  offset?: number
+  limit?: number
+  snapshot?: AdminSnapshotId
+}
+```
+
+```ts type-equiv
+/** One top-level tool execution; repeated results do not add calls. */
+interface AdminToolRow {
+  sessionId: SessionId
+  seq: SessionSeq
+  name: string
+  nested: boolean
+  time: number
+  durationMs: number | null
+  status: 'running' | 'success' | 'error' | 'interrupted'
+}
+```
+
+```ts type-equiv
+/** Tool detail expands only the selected call and result. */
+interface AdminToolDetail {
+  tool: AdminToolRow
+  arguments: string
+  result: string | null
+  truncated: boolean
+  snapshot: AdminSnapshotId
+}
+```
+
+```ts type-equiv
+/** Model-call source, including observable calls without a usage settlement. */
+type AdminUsageKind = 'conversation' | 'compaction' | 'title'
+```
+
+```ts type-equiv
+/** Recorded usage for one call; null preserves missing counters or rates. */
+interface AdminUsageRow {
+  sessionId: SessionId
+  seq: SessionSeq
+  time: number
+  kind: AdminUsageKind
+  model: string | null
+  inputTokens: number | null
+  cacheReadTokens: number | null
+  outputTokens: number | null
+  coverage: 'priced' | 'missing-usage' | 'missing-price' | 'unsupported'
+  amount: number | null
+  currency: string | null
+  priceId: AdminPriceId | null
+}
+```
+
+```ts type-equiv
+/** A per-currency subtotal never merges different currencies. */
+interface AdminCostTotal { currency: string; amount: number }
+```
+
+```ts type-equiv
+/** Asia/Shanghai calendar-day totals over the complete filtered call set. */
+interface AdminUsageDay {
+  date: string
+  calls: number
+  inputTokens: number
+  cacheReadTokens: number
+  outputTokens: number
+  costs: AdminCostTotal[]
+}
+```
+
+```ts type-equiv
+/** Per-model totals over the complete filtered call set. */
+interface AdminModelUsage { model: string | null; calls: number; costs: AdminCostTotal[] }
+```
+
+```ts type-equiv
+/** Totals and coverage use the identical selection as the detail table. */
+interface AdminUsageSummary {
+  daily: AdminUsageDay[]
+  models: AdminModelUsage[]
+  sessions: { running: number; failed: number; total: number }
+  calls: number
+  inputTokens: number
+  cacheReadTokens: number
+  outputTokens: number
+  pricedCalls: number
+  missingUsage: number
+  missingPrice: number
+  unsupportedCalls: number
+  costs: AdminCostTotal[]
+  snapshot: AdminSnapshotId
+  indexedAt: number | null
+}
+```
+
+```ts type-equiv
+/** DeepSeek prices per one million tokens, represented as decimal strings. */
+interface AdminPriceInput {
+  model: string
+  currency: string
+  effectiveFrom: number
+  inputPerMillion: string
+  cacheReadPerMillion: string
+  outputPerMillion: string
+  /** Optional official Beijing peak/off-peak schedule; the three rates above are peak rates. */
+  deepseekSchedule?: {
+    /** Exclusive end of the verified holiday calendar, in epoch milliseconds. */
+    validUntil: number
+    /** Published holiday dates in Beijing, formatted YYYY-MM-DD; weekends are always off-peak. */
+    holidays: string[]
+  } | undefined
+}
+```
+
+```ts type-equiv
+/** An immutable administrator-entered price version. */
+interface AdminPriceVersion extends AdminPriceInput { id: AdminPriceId; createdAt: number }
+```
+
+```ts type-equiv
+/** Historical pricing is a separate explicit operation. */
+interface AdminHistoricalPriceRequest { price: AdminPriceInput }
+```
+
+```ts type-equiv
+/** Readiness and visible indexing failures; errors never imply an empty corpus. */
+interface AdminIndexStatus {
+  state: 'idle' | 'indexing' | 'ready' | 'error'
+  indexedSessions: number
+  totalSessions: number
+  indexedAt: number | null
+  snapshot: AdminSnapshotId
+  failedSessions: number
+  error: string | null
+}
+```
+
+```ts type-equiv
+/** CSV export uses exactly the selected page revision and filters. */
+interface AdminExportRequest {
+  kind: 'sessions' | 'tools' | 'usage'
+  filter?: AdminFilter
+  snapshot: AdminSnapshotId
+}
+```
+
+```ts type-equiv
+/** A bounded UTF-8 CSV document, ready for a browser download. */
+interface AdminExportResult { filename: string; csv: string; snapshot: AdminSnapshotId }
+```
+
+```ts type-equiv
+/** Stable administrator failures, rendered by the receiving locale dictionary. */
+type AdminFailure = 'denied' | 'stale-snapshot' | 'invalid-request' | 'not-found' | 'index-unavailable' | 'export-too-large'
+```
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -371,6 +631,106 @@ type SessionQueryErrorCode =
 ## Cordis API
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxadmin--admin"></a>
+
+### `ctx.admin` — `Admin`
+
+Internal administration service; every Remote operation requires the owner principal.
+
+```ts cordis-catalog
+/**
+ * List indexed conversations without activating their agents.
+ * @param request - shared filter, pagination and optional revision.
+ * @returns one bounded page with coverage counters.
+ */
+@Remote listSessions(request: AdminPageRequest): AdminPage<AdminSessionRow>
+
+/**
+ * Read one indexed conversation's identity and watermark.
+ * @param sessionId - conversation to inspect.
+ * @param snapshot - optional selected revision.
+ * @returns metadata covering the indexed journal cut.
+ */
+@Remote getSession(sessionId: SessionId, snapshot?: AdminSnapshotId): AdminSessionDetail
+
+/**
+ * Read a bounded event page through the prepared observation API.
+ * @param request - indexed conversation, pagination and optional revision.
+ * @returns bounded serialized events, with readable chat text separate from raw payloads.
+ */
+@Remote async listEvents(request: AdminEventsRequest): Promise<AdminPage<AdminEventRow>>
+
+/**
+ * List top-level and nested tool calls, each with its own duration.
+ * @param request - shared selection and page.
+ * @returns indexed tool metadata without arguments or result payloads.
+ */
+@Remote listTools(request: AdminPageRequest): AdminPage<AdminToolRow>
+
+/**
+ * Read only the selected tool's payload from its source observation.
+ * @param sessionId - owning conversation.
+ * @param seq - indexed tool-call event.
+ * @param snapshot - optional selected revision.
+ * @returns bounded arguments and result, preserving missing outcomes.
+ */
+@Remote async getTool(sessionId: SessionId, seq: SessionSeq, snapshot?: AdminSnapshotId): Promise<AdminToolDetail>
+
+/**
+ * List DeepSeek estimates and explicit uncovered calls.
+ * @param request - shared selection and page.
+ * @returns call-level token counters and matched immutable rates.
+ */
+@Remote listUsage(request: AdminPageRequest): AdminPage<AdminUsageRow>
+
+/**
+ * Aggregate the full filtered call set, independently of the visible page.
+ * @param request - shared selection and optional revision.
+ * @returns currency-separated subtotals and coverage counts.
+ */
+@Remote usageSummary(request: AdminPageRequest): AdminUsageSummary
+
+/** List configured prices without supplying implicit rates.
+ * @returns immutable configured prices; absence means costs are unavailable.
+ */
+@Remote listPrices(): AdminPriceVersion[]
+
+/**
+ * Append a future-effective DeepSeek price version.
+ * @param price - all three disjoint usage rates and activation time.
+ * @returns committed version; existing versions are never overwritten.
+ */
+@Remote addPrice(price: AdminPriceInput): AdminPriceVersion
+
+/**
+ * Explicitly add a historical version and recompute subsequent estimates from it.
+ * @param request - backdated rates; the next effective version bounds their interval.
+ * @returns committed immutable version; prior exports retain their original revision.
+ */
+@Remote repriceHistory(request: AdminHistoricalPriceRequest): AdminPriceVersion
+
+/** Read the current background index progress.
+ * @returns background progress and any persistent indexing failure.
+ */
+@Remote indexStatus(): AdminIndexStatus
+
+/** Request a rebuild of derived metadata while preserving durable prices.
+ * @returns current rebuild progress; a running pass is left intact.
+ */
+@Remote rebuildIndex(): AdminIndexStatus
+
+/**
+ * Export the exact selected revision without silently refreshing it.
+ * @param request - resource kind, shared filters, and required revision.
+ * @returns a bounded CSV with formula-safe text cells and revision metadata.
+ */
+@Remote exportCsv(request: AdminExportRequest): AdminExportResult
+```
+
+Types: [SessionId](core.md) · [SessionSeq](session.md)
+
+Source: [`packages/session-query/admin/src/index.ts`](../../packages/session-query/admin/src/index.ts)
 
 <a id="ctxsessionquery--sessionqueryengine-abstract-seam"></a>
 
@@ -388,6 +748,16 @@ Exact reads, filters, and traces are backend-independent concrete behavior. A ba
  * @returns a caller-owned observation lease.
  */
 observeSession( sessionId: SessionId, options: SessionObservationOptions = {}, ): Promise<SessionObservation>
+
+/**
+ * Read a private domain projection from the live or prepared observation owner.
+ * @param sessionId - logical Session identity.
+ * @param readState - synchronous domain reader; must not append events or retain the Session.
+ * @param options - cancellation and optional public projection selection.
+ * @returns domain state and its observation; prepared state can include constructor-only resume markers,
+ * never new persisted work. The caller disposes the observation.
+ */
+observeState<S>( sessionId: SessionId, readState: (session: Session) => S, options: SessionObservationOptions = {}, ): Promise<{ observation: SessionObservation; state: S }>
 
 /**
  * Search the live-preferred logical corpus and group by session.
@@ -505,7 +875,7 @@ async traceEvent(request: SessionEventTraceRequest, signal?: AbortSignal): Promi
 async readEvent(request: SessionEventReadRequest, signal?: AbortSignal): Promise<SessionEventWindow>
 ```
 
-Types: [SessionId](core.md) · [SessionTitleSnapshot](session-title.md)
+Types: [Session](session.md) · [SessionId](core.md) · [SessionTitleSnapshot](session-title.md)
 
 Source: [`packages/session-query/session-query/src/index.ts`](../../packages/session-query/session-query/src/index.ts)
 <!-- END GENERATED cordis-surface -->

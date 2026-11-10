@@ -16,6 +16,8 @@ export interface ProductPackagePolicy {
  * Optional integrations may be reached by an optional bundle without becoming default capabilities.
  */
 export const PRODUCT_PACKAGE_POLICY: Readonly<Record<string, ProductPackagePolicy>> = {
+  'packages/session-query/admin': { category: 'optional', reason: 'Owner-only administration and DeepSeek cost reporting enabled through the administration overlay.' },
+  'packages/client/ui-admin': { category: 'optional', reason: 'Owner-only management panel enabled together with the administration service.' },
   'packages/core/agent-tool-presentation': { category: 'optional', reason: 'Deprecated selector retained for existing executor configurations.' },
   'packages/browser-use/browser-use': { category: 'optional', reason: 'Service definition used by explicitly selected browser providers.' },
   'packages/computer-use/computer-use': { category: 'optional', reason: 'Service definition used by explicitly selected computer providers.' },

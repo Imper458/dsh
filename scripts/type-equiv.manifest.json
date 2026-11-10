@@ -718,6 +718,11 @@
     },
     {
       "doc": "docs/subsystems/session-title.md",
+      "symbol": "SessionTitleLlmResultEventData",
+      "source": "packages/session/session-title-llm/src/index.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-title.md",
       "symbol": "SessionTitleUserMessage",
       "source": "packages/session/session-title/src/types.ts"
     },
@@ -2781,6 +2786,131 @@
       "doc": "docs/subsystems/forge.md",
       "symbol": "ForgeReviewResult",
       "source": "packages/experimental/forge/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminSnapshotId",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminPriceId",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminSessionState",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminFilter",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminPageRequest",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminPage",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminSessionRow",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminSessionDetail",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminEventRow",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminEventsRequest",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminToolRow",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminToolDetail",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminUsageKind",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminUsageRow",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminCostTotal",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminUsageDay",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminModelUsage",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminUsageSummary",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminPriceInput",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminPriceVersion",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminHistoricalPriceRequest",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminIndexStatus",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminExportRequest",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminExportResult",
+      "source": "packages/session-query/admin/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-query.md",
+      "symbol": "AdminFailure",
+      "source": "packages/session-query/admin/src/types.ts"
     }
   ]
 }

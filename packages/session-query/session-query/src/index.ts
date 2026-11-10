@@ -145,6 +145,22 @@ export abstract class SessionQueryEngine extends Service {
   }
 
   /**
+   * Read a private domain projection from the live or prepared observation owner.
+   * @param sessionId - logical Session identity.
+   * @param readState - synchronous domain reader; must not append events or retain the Session.
+   * @param options - cancellation and optional public projection selection.
+   * @returns domain state and its observation; prepared state can include constructor-only resume markers,
+   * never new persisted work. The caller disposes the observation.
+   */
+  observeState<S>(
+    sessionId: SessionId,
+    readState: (session: Session) => S,
+    options: SessionObservationOptions = {},
+  ): Promise<{ observation: SessionObservation; state: S }> {
+    return this._observations.readState(sessionId, readState, options)
+  }
+
+  /**
    * Search the live-preferred logical corpus and group by session.
    * @param request - query text, metadata filters, page size, and cursor.
    * @param exec - optional cancellation control.

@@ -29,6 +29,7 @@ import type {
   LlmResolvedModelInfo,
   Message,
   ReasoningEffortId,
+  TokenUsage,
 } from '@deepseek-ai/dsh-llm'
 import { deadline, MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { assertNever, deepFreeze } from '@deepseek-ai/dsh-util-values'
@@ -57,10 +58,22 @@ export interface SessionTitleLlmRequestEventData {
   readonly reasoningEffort?: ReasoningEffortId
 }
 
+/** Settled model execution and reported usage for one auxiliary title request. */
+export interface SessionTitleLlmResultEventData {
+  /** Sequence of the owning `session/title-llm-request` event. */
+  readonly requestSeq: SessionSeq
+  /** Model execution outcome; completion does not imply that the title was accepted. */
+  readonly status: 'completed' | 'failed' | 'cancelled'
+  /** Last provider-reported usage; absence means unreported, not zero. */
+  readonly usage?: TokenUsage
+}
+
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /** Log-only pre-dispatch record of one session-title model request. */
     'session/title-llm-request': SessionTitleLlmRequestEventData
+    /** Log-only settlement of one auxiliary title request, including reported usage. */
+    'session/title-llm-result': SessionTitleLlmResultEventData
   }
 }
 
@@ -224,7 +237,7 @@ function terminalFinish(finish: FinishReason): SessionTitleLlmFinish {
  * The provider owns the system prompt, user input, reasoning selection, and
  * output interpretation. This function owns route preparation, the final input
  * byte limit, the output-token cap, the end-to-end deadline, cancellation, the
- * exact `session/title-llm-request` record, and stream assembly.
+ * exact request and usage settlement records, and stream assembly.
  * @param ctx - context exposing the registered LLM service.
  * @param config - validated execution controls.
  * @param request - service-owned session, route, message snapshot, current title, and cancellation.
@@ -270,7 +283,7 @@ export async function executeSessionTitleLlm(
     purpose: 'session-title',
     signal: callDeadline.signal,
   })
-  request.session.append('session/title-llm-request', {
+  const loggedRequest = request.session.append('session/title-llm-request', {
     titleProvider,
     messageSeqs: [...prepared.messageSeqs],
     route,
@@ -279,13 +292,24 @@ export async function executeSessionTitleLlm(
     maxTokens,
     ...call.config.reasoningEffort === undefined ? {} : { reasoningEffort: call.config.reasoningEffort },
   })
-  callDeadline.signal.throwIfAborted()
   const assembler = new BlockAssembler()
-  for await (const chunk of call.stream(options)) {
+  let status: SessionTitleLlmResultEventData['status'] = 'failed'
+  try {
     callDeadline.signal.throwIfAborted()
-    assembler.push(chunk)
+    for await (const chunk of call.stream(options)) {
+      assembler.push(chunk)
+      callDeadline.signal.throwIfAborted()
+    }
+    callDeadline.signal.throwIfAborted()
+    const finish = terminalFinish(assembler.finish)
+    status = 'completed'
+    return { blocks: assembler.blocks(), finish, model: route }
+  } finally {
+    if (callDeadline.signal.aborted || assembler.finish.kind === 'aborted') status = 'cancelled'
+    request.session.append('session/title-llm-result', {
+      requestSeq: loggedRequest.seq,
+      status,
+      ...assembler.usage === undefined ? {} : { usage: assembler.usage },
+    })
   }
-  callDeadline.signal.throwIfAborted()
-  const finish = terminalFinish(assembler.finish)
-  return { blocks: assembler.blocks(), finish, model: route }
 }

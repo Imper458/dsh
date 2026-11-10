@@ -86,6 +86,20 @@ interface SessionTitleLlmRequestEventData {
 }
 ```
 
+结算记录引用对应请求序号，即使生成失败或取消也保留已报告用量。原请求持有模型路由；没有结算记录或用量报告不代表消耗为零。
+
+```ts type-equiv
+/** Settled model execution and reported usage for one auxiliary title request. */
+interface SessionTitleLlmResultEventData {
+  /** Sequence of the owning `session/title-llm-request` event. */
+  readonly requestSeq: SessionSeq
+  /** Model execution outcome; completion does not imply that the title was accepted. */
+  readonly status: 'completed' | 'failed' | 'cancelled'
+  /** Last provider-reported usage; absence means unreported, not zero. */
+  readonly usage?: TokenUsage
+}
+```
+
 ## 提供方输入与输出
 
 服务会对截至某一修订的合格消息、以及在每次提供方调用前刚刚确保的回退和最新已接纳标题创建快照。提供方返回的 seq 仅可来自该请求；由服务负责的接纳流程会验证顺序、规范化标题、强制执行字节上限，并追加标题及其来源消息 seq 和来源类型。

@@ -8,6 +8,7 @@
     "rewriteRelativeImportExtensions": false
   },
   "include": [
+    "apps/web/tests/admin.e2e.ts",
     "apps/web/tests/home-whale.e2e.ts",
     "apps/web/tests/sidebar-drawer.e2e.ts",
     "apps/web/tests/creation-recommendations.e2e.ts",
@@ -395,6 +396,7 @@
     { "path": "./packages/session/session-stats" },
     { "path": "./packages/session-query/session-query" },
     { "path": "./packages/session-query/session-query-sqlite" },
+    { "path": "./packages/session-query/admin" },
     { "path": "./packages/session-query/session-log-export/tsconfig.host.json" },
     { "path": "./packages/settings/settings" },
     { "path": "./packages/credentials/credentials" },

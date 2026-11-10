@@ -1,0 +1,12 @@
+{
+  "final_response": "ACKNOWLEDGED",
+  "route": {
+    "provider": "title-replay",
+    "model": "title-model"
+  },
+  "status": "completed",
+  "usage": {
+    "inputTokens": 12,
+    "outputTokens": 4
+  }
+}
